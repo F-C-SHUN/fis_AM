@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="出席表">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234CAF50'/><text x='50' y='60' text-anchor='middle' fill='white' font-size='60'>出</text></svg>">
+    <title>出席表</title>
+    <!-- Firebase SDK v8 (works without npm) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .nav-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .nav-btn:hover {
+            background: #45a049;
+        }
+        /* Sidebar Styles */
+        .sidebar-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 500;
+            transition: background 0.2s;
+        }
+        
+        .sidebar-button:hover {
+            background: #555;
+        }
+        
+        /* Login Popup Styles */
+        .login-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1500;
+        }
+        
+        .login-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .login-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #333;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .login-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .login-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-login {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-login:hover {
+            background: #45a049;
+        }
+        
+        .btn-cancel {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-cancel:hover {
+            background: #da190b;
+        }
+        
+        /* Admin Menu Styles */
+        .admin-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1500;
+        }
+        
+        .admin-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .admin-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #333;
+        }
+        
+        .admin-menu-item {
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+        
+        .admin-menu-item:hover {
+            background: #e9ecef;
+            border-color: #4CAF50;
+        }
+        
+        .admin-close-btn {
+            width: 100%;
+            padding: 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        
+        .admin-close-btn:hover {
+            background: #5a6268;
+        }
+        
+        .error-message {
+            color: #f44336;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        /* Account Management Styles */
+        .account-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1600;
+        }
+        
+        .account-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .account-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+        
+        .account-list {
+            margin-bottom: 20px;
+        }
+        
+        .account-item {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            gap: 15px;
+        }
+        
+        .account-username {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+        }
+        
+        .account-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .account-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .btn-change-username {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-change-password {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+        
+        .account-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .add-account-btn {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+        
+        .add-account-btn:hover {
+            background: #45a049;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .form-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-save {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .form-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .delete-confirmation {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .delete-warning {
+            background: #000;
+            color: #f44336;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .delete-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .delete-confirm-btn {
+            background: #f44336;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .delete-keep-btn {
+            background: #00bcd4;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .attendance-table {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin: 0 auto;
+            max-width: 1200px;
+            position: relative;
+        }
+        
+        .table-header {
+            background: #4CAF50;
+            color: white;
+            display: grid;
+            grid-template-columns: 100px repeat(10, 1fr);
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .header-cell {
+            padding: 15px 8px;
+            text-align: center;
+            font-weight: bold;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .table-row {
+            display: grid;
+            grid-template-columns: 100px repeat(10, 1fr);
+            border-bottom: 1px solid #eee;
+        }
+        
+        .date-cell {
+            padding: 15px 8px;
+            text-align: center;
+            font-weight: bold;
+            background: #f8f9fa;
+            border-right: 1px solid #eee;
+        }
+        
+        .date-cell.weekend {
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .table-row.weekend .attendance-cell {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: default;
+        }
+        
+        .table-row.weekend .attendance-cell:hover {
+            background: #f8f9fa;
+        }
+        
+        .attendance-cell {
+            padding: 15px 8px;
+            text-align: center;
+            border-right: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .attendance-cell:hover {
+            background-color: #f0f8ff;
+        }
+        
+        .attendance-cell.present {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        
+        .attendance-cell.unexcused {
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+        }
+        
+        .attendance-cell.excused {
+            background-color: #fff3e0;
+            color: #f57c00;
+            font-weight: bold;
+        }
+        
+        /* Popup Modal Styles */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .popup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .popup-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .popup-section {
+            margin-bottom: 25px;
+        }
+        
+        .popup-section h3 {
+            margin: 0 0 10px 0;
+            color: #555;
+            font-size: 16px;
+        }
+        
+        .temperature-input {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .temperature-wheels {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .temp-wheel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f8f9fa;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .wheel-whole {
+            width: 80px;
+        }
+        
+        .wheel-decimal {
+            width: 60px;
+        }
+        
+        .wheel-options {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        
+        .wheel-option {
+            padding: 8px;
+            text-align: center;
+            background: #e9ecef;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        
+        .wheel-option:hover {
+            background: #007bff;
+            color: white;
+        }
+        
+        .wheel-option.selected {
+            background: #28a745;
+            color: white;
+            border-color: #1e7e34;
+        }
+        
+        .temperature-display {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            background: #ff9800;
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 3px solid #f57c00;
+            color: white;
+            min-width: 100px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .temperature-display.travel-mode {
+            background: #9e9e9e;
+            border-color: #757575;
+            color: #e0e0e0;
+        }
+        
+        .travel-button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .travel-button:hover {
+            background: #1976D2;
+        }
+        
+        .travel-button.active {
+            background: #4CAF50;
+        }
+        
+        .temperature-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .memo-input {
+            width: 100%;
+            height: 80px;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .memo-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .attendance-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .attendance-btn {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .attendance-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-present {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-unexcused {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-excused {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-close {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .control-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .stats-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Save Status Indicator */
+        .save-status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .save-status.show {
+            opacity: 1;
+        }
+        
+        .save-status.success {
+            background: #4CAF50;
+        }
+        
+        .save-status.error {
+            background: #f44336;
+        }
+        
+        .save-status.saving {
+            background: #ff9800;
+        }
+        /* Staff header cells (last two columns) */
+        .header-cell.staff {
+            background: #2E7D32;
+        }
+
+        /* Staff cells (last two columns) */
+        .attendance-cell.staff {
+            background-color: #e8f5e8;
+        }
+
+        .attendance-cell.staff:hover {
+            background-color: #d4edda;
+        }
+        /* Staff cells with attendance status */
+        .attendance-cell.staff.present {
+            background-color: #c8e6c9;
+            color: #1b5e20;
+        }
+
+        .attendance-cell.staff.unexcused {
+            background-color: #ffcdd2;
+            color: #b71c1c;
+        }
+
+        .attendance-cell.staff.excused {
+            background-color: #ffe0b2;
+            color: #e65100;
+        }
+
+        /* Weekend staff cells */
+        .table-row.weekend .attendance-cell.staff {
+            background: #e0e0e0;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Button -->
+    <button class="sidebar-button" onclick="openLogin()">☰</button>
+    
+    <div class="header" style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+        <button id="prev-month" class="nav-btn">◀ 前月</button>
+        <h1 id="calendar-title">出席表</h1>
+        <button id="next-month" class="nav-btn">次月 ▶</button>
+    </div>
+    
+    <div class="attendance-table">
+        <div class="table-header">
+            <div class="header-cell">日付</div>
+            <div class="header-cell">高橋泰世</div>
+            <div class="header-cell">大久保晴平</div>
+            <div class="header-cell">古山咲太朗</div>
+            <div class="header-cell">青沼明佳利</div>
+            <div class="header-cell">稲垣ひかり</div>
+            <div class="header-cell">井上達瑭</div>
+            <div class="header-cell">井上智揮</div>
+            <div class="header-cell">伊豆春乃</div>
+            <div class="header-cell staff">愛</div>
+            <div class="header-cell staff">ファビア</div>
+        </div>
+        
+        <div id="attendance-grid"></div>
+    </div>
+    
+    <!-- Login Popup -->
+    <div id="login-popup" class="login-popup">
+        <div class="login-content">
+            <div class="login-title">LOGIN</div>
+            <div>
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">USER NAME</div>
+                <input type="text" id="username-input" class="login-input" placeholder="">
+            </div>
+            <div>
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">PASSWORD</div>
+                <input type="password" id="password-input" class="login-input" placeholder="">
+            </div>
+            <div id="login-error" class="error-message" style="display: none;">Invalid username or password</div>
+            <div class="login-buttons">
+                <button class="login-btn btn-cancel" onclick="closeLogin()">CANCEL</button>
+                <button class="login-btn btn-login" onclick="attemptLogin()">LOGIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Management Popup -->
+    <div id="account-popup" class="account-popup">
+        <div class="account-content">
+            <div class="account-title">Editing Admin Accounts</div>
+            
+            <button class="add-account-btn" onclick="showAddAccount()">Add Account? +</button>
+            
+            <div class="account-list" id="account-list">
+                <!-- Account items will be populated here -->
+            </div>
+            
+            <button class="admin-close-btn" onclick="closeAccounts()">Close</button>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Account Form -->
+    <div id="account-form-popup" class="account-popup">
+        <div class="account-content">
+            <div class="account-title" id="form-title">Add Account</div>
+            
+            <div class="form-group">
+                <label class="form-label" id="username-label">NEW USERNAME</label>
+                <input type="text" id="form-username" class="form-input" maxlength="20" placeholder="">
+            </div>
+            
+            <div class="form-group" id="password-group">
+                <label class="form-label" id="password-label">PASSWORD</label>
+                <input type="password" id="form-password" class="form-input" placeholder="" maxlength="20">
+            </div>
+            
+            <div class="form-group" id="new-password-group" style="display: none;">
+                <label class="form-label">NEW PASSWORD</label>
+                <input type="password" id="form-new-password" class="form-input" placeholder="" maxlength="20">
+            </div>
+            
+            <div class="form-group" id="confirm-password-group" style="display: none;">
+                <label class="form-label">CONFIRM PASSWORD</label>
+                <input type="password" id="form-confirm-password" class="form-input" placeholder="" maxlength="20">
+            </div>
+            
+            <div id="form-error" class="error-message" style="display: none;"></div>
+            
+            <div class="form-buttons">
+                <button class="form-btn btn-cancel" onclick="closeAccountForm()">Cancel</button>
+                <button class="form-btn btn-save" onclick="saveAccount()">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation -->
+    <div id="delete-popup" class="account-popup">
+        <div class="account-content">
+            <div class="delete-confirmation">
+                <div class="account-title">Delete Account</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Enter password for '<span id="delete-username-label"></span>' to confirm deletion:</label>
+                    <input type="password" id="delete-password" class="form-input" placeholder="Password" maxlength="20">
+                </div>
+                
+                <div id="delete-error" class="error-message" style="display: none;"></div>
+                
+                <div class="delete-warning">
+                    ARE YOU SURE YOU WANT TO DELETE '<span id="delete-username"></span>'?
+                </div>
+                <div class="delete-buttons">
+                    <button class="delete-confirm-btn" onclick="confirmDelete()">Delete Account</button>
+                    <button class="delete-keep-btn" onclick="closeDelete()">Keep Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Menu Popup -->
+    <div id="admin-popup" class="admin-popup">
+        <div class="admin-content">
+            <div class="admin-title">WHAT DO YOU WANT TO DO</div>
+            <div class="admin-menu-item" onclick="adminAction('edit-monthly')">-Edit Monthly Plan</div>
+            <div class="admin-menu-item" onclick="adminAction('edit-student')">-Edit Student Information</div>
+            <div class="admin-menu-item" onclick="adminAction('view-changelog')">-View a changelog</div>
+            <div class="admin-menu-item" onclick="adminAction('print-report')">-Print a individual report</div>
+            <div class="admin-menu-item" onclick="adminAction('schedule-month')">-Schedule the next month</div>
+            <div class="admin-menu-item" onclick="adminAction('view-database')">-View the Database</div>
+            <div class="admin-menu-item" onclick="adminAction('change-password')">-Editing Admin Accounts</div>
+            <button class="admin-close-btn" onclick="closeAdmin()">Close</button>
+        </div>
+    </div>
+
+    <!-- Popup Modal -->
+    <div id="popup-overlay" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2 id="popup-title">出席記録</h2>
+                <p id="popup-info">学生: <span id="selected-student"></span> | 日付: <span id="selected-date"></span></p>
+            </div>
+            
+            <div class="popup-section">
+                <h3>🌡️ 体温</h3>
+                <div class="temperature-input">
+                    <div class="temperature-wheels">
+                        <div class="temp-wheel wheel-whole">
+                            <div class="wheel-options" id="whole-options">
+                                <div class="wheel-option" data-value="33">33</div>
+                                <div class="wheel-option" data-value="34">34</div>
+                                <div class="wheel-option" data-value="35">35</div>
+                                <div class="wheel-option selected" data-value="36">36</div>
+                                <div class="wheel-option" data-value="37">37</div>
+                                <div class="wheel-option" data-value="38">38</div>
+                                <div class="wheel-option" data-value="39">39</div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 24px; font-weight: bold;">.</div>
+                        
+                        <div class="temp-wheel wheel-decimal">
+                            <div class="wheel-options" id="decimal-options">
+                                <div class="wheel-option selected" data-value="0">0</div>
+                                <div class="wheel-option" data-value="1">1</div>
+                                <div class="wheel-option" data-value="2">2</div>
+                                <div class="wheel-option" data-value="3">3</div>
+                                <div class="wheel-option" data-value="4">4</div>
+                                <div class="wheel-option" data-value="5">5</div>
+                                <div class="wheel-option" data-value="6">6</div>
+                                <div class="wheel-option" data-value="7">7</div>
+                                <div class="wheel-option" data-value="8">8</div>
+                                <div class="wheel-option" data-value="9">9</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="temperature-section">
+                        <div class="temperature-display" id="temp-display">36.0</div>
+                        <button class="travel-button" id="travel-btn" onclick="toggleTravelMode()">旅行</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="popup-section">
+                <h3>📝 メモ</h3>
+                <textarea id="memo-input" class="memo-input" placeholder="メモを入力してください..."></textarea>
+            </div>
+            
+            <div class="popup-section">
+                <h3>📊 出席状況</h3>
+                <div class="attendance-buttons">
+                    <button class="attendance-btn btn-present" onclick="setAttendance('present')">○<br>出席</button>
+                    <button class="attendance-btn btn-excused" onclick="setAttendance('excused')">/<br>計画欠席</button>
+                    <button class="attendance-btn btn-unexcused" onclick="setAttendance('unexcused')">欠<br>欠席</button>
+                </div>
+            </div>
+            
+            <div class="control-buttons">
+                <button class="control-btn btn-clear" onclick="clearCell()">クリア</button>
+                <button class="control-btn btn-close" onclick="closePopup()">閉じる</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats-section">
+        <h3>📊 統計情報</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number" id="present-count">0</div>
+                <div class="stat-label">出席</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="excused-count">0</div>
+                <div class="stat-label">計画欠席</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="unexcused-count">0</div>
+                <div class="stat-label">欠席</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="total-recorded">0</div>
+                <div class="stat-label">記録済み</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Save Status Indicator -->
+    <div id="save-status" class="save-status">Initializing...</div>
+
+    <script>
+        // Firebase Configuration - REPLACE WITH YOUR CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeHvS3GiDI1s2HzI01CnSGqlZynvyrOVU",
+            authDomain: "attendance-d56e5.firebaseapp.com",
+            databaseURL: "https://attendance-d56e5-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "attendance-d56e5",
+            storageBucket: "attendance-d56e5.firebasestorage.app",
+            messagingSenderId: "899359729842",
+            appId: "1:899359729842:web:ea8205e8f20b5b585e81ab"
+        };
+
+        
+        // Initialize Firebase
+        let database = null;
+        let schoolId = null;
+        let isOnline = navigator.onLine;
+        let firebaseEnabled = false;
+        
+        try {
+            // Only initialize if we have a real config
+            if (firebaseConfig.apiKey !== "demo-mode") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseEnabled = true;
+                showStatus('Firebase connected ✓', 'success');
+            } else {
+                console.log('Firebase config not set - running in offline mode');
+                showStatus('Running in offline mode', 'info');
+            }
+        } catch (error) {
+            console.warn('Firebase initialization failed:', error);
+            firebaseEnabled = false;
+            showStatus('Using offline mode only', 'error');
+        }
+        const students = ["高橋泰世", "大久保晴平", "古山咲太朗", "青沼明佳利", "稲垣ひかり", "井上達瑭", "井上智揮", "伊豆春乃", "愛", "ファビア"];
+        const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+        const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+        
+        // Get current date and set up calendar
+        const now = new Date();
+        let displayYear  = now.getFullYear();
+        let displayMonth = now.getMonth() + 1;
+        
+        // Use current month or default to June 2025 for demo
+        function daysIn(displayYear, displayMonth) {
+            return new Date(displayYear, displayMonth, 0).getDate();
+        }
+        
+        // Global variables - DEFINED FIRST
+        let attendanceData = {};
+        let temperatureData = {};
+        let memoData = {};
+        let currentCell = null;
+        let currentTempWhole = 36;
+        let currentTempDecimal = 0;
+        let isLoggedIn = false;
+        let isTravelMode = false;
+        
+        // Login credentials
+        const validCredentials = {
+            'tester': 'aaaa'
+        };
+        
+        // Load credentials from localStorage if available
+        function loadCredentials() {
+            const saved = localStorage.getItem('adminCredentials');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    Object.assign(validCredentials, parsed);
+                } catch (error) {
+                    console.error('Failed to load credentials:', error);
+                }
+            }
+        }
+        
+        // Save credentials to localStorage
+        function saveCredentials() {
+            localStorage.setItem('adminCredentials', JSON.stringify(validCredentials));
+        }
+        
+        // Save Status Functions
+        function showStatus(message, type = 'info', duration = 3000) {
+            const statusEl = document.getElementById('save-status');
+            statusEl.textContent = message;
+            statusEl.className = `save-status show ${type}`;
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    statusEl.classList.remove('show');
+                }, duration);
+            }
+        }
+        
+        // Local Storage Functions
+        function saveToLocalStorage() {
+            try {
+                const monthKey = `${displayYear}-${displayMonth.toString().padStart(2, '0')}`;
+                const data = {
+                    attendanceData,
+                    temperatureData,
+                    memoData,
+                    students,
+                    lastSaved: new Date().toISOString(),
+                    monthKey
+                };
+                localStorage.setItem(`attendance_${schoolId}_${monthKey}`, JSON.stringify(data));
+                localStorage.setItem('attendance_last_month', monthKey);
+                return true;
+            } catch (error) {
+                console.error('LocalStorage save failed:', error);
+                return false;
+            }
+        }
+        
+        function loadFromLocalStorage() {
+            try {
+                const monthKey = `${displayYear}-${displayMonth.toString().padStart(2, '0')}`;
+                const saved = localStorage.getItem(`attendance_${schoolId}_${monthKey}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    attendanceData = data.attendanceData || {};
+                    temperatureData = data.temperatureData || {};
+                    memoData = data.memoData || {};
+                    
+                    // Update any old 35.6 defaults to new 36.0 default
+                    Object.keys(temperatureData).forEach(dayKey => {
+                        Object.keys(temperatureData[dayKey]).forEach(student => {
+                            if (temperatureData[dayKey][student] === 35.6) {
+                                temperatureData[dayKey][student] = 36.0;
+                            }
+                        });
+                    });
+                    
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('LocalStorage load failed:', error);
+                return false;
+            }
+        }
+        
+        // Firebase Functions
+        function saveToFirebase() {
+            if (!firebaseEnabled || !database || !schoolId || !isOnline) {
+                saveToLocalStorage();
+                showStatus('Saved locally (offline)', 'saving', 2000);
+                return;
+            }
+            
+            showStatus('Saving...', 'saving', 0);
+            
+            const monthKey = `${displayYear}-${displayMonth.toString().padStart(2, '0')}`;
+            const data = {
+                attendanceData,
+                temperatureData,
+                memoData,
+                students,
+                lastUpdated: new Date().toISOString()
+            };
+            
+            database.ref(`schools/${schoolId}/current/${monthKey}`).set(data)
+                .then(() => {
+                    saveToLocalStorage(); // Always backup locally
+                    showStatus('Saved to cloud ✓', 'success');
+                })
+                .catch((error) => {
+                    console.error('Firebase save failed:', error);
+                    saveToLocalStorage();
+                    showStatus('Saved locally (cloud failed)', 'error');
+                });
+        }
+        
+        function loadFromFirebase() {
+            // Always try to load from localStorage first for immediate display
+            const localLoaded = loadFromLocalStorage();
+            if (localLoaded) {
+                generateGrid();
+                updateStats();
+                showStatus('Loaded from local storage', 'success');
+            } else {
+                // Initialize empty data if no local data
+                generateGrid();
+                updateStats();
+                showStatus('Starting fresh', 'info');
+            }
+            
+            // Then try to sync with Firebase if available
+            if (!firebaseEnabled || !database || !schoolId || !isOnline) {
+                return;
+            }
+            
+            const monthKey = `${displayYear}-${displayMonth.toString().padStart(2, '0')}`;
+            database.ref(`schools/${schoolId}/current/${monthKey}`).once('value')
+                .then((snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        attendanceData = data.attendanceData || {};
+                        temperatureData = data.temperatureData || {};
+                        memoData = data.memoData || {};
+                        if (data.students) {
+                            students.length = 0;
+                            students.push(...data.students);
+                        }
+                        saveToLocalStorage(); // Backup to local
+                        generateGrid();
+                        updateStats();
+                        showStatus('Synced with cloud ✓', 'success');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Firebase load failed:', error);
+                    showStatus('Using local data (cloud failed)', 'error');
+                });
+        }
+        
+        // Network Status Monitoring
+        window.addEventListener('online', () => {
+            isOnline = true;
+            showStatus('Back online - syncing...', 'success');
+            saveToFirebase(); // Sync local changes to cloud
+        });
+        
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            showStatus('Offline - saving locally', 'saving');
+        });
+        
+        // Temperature wheel functions
+        function updateTempDisplay() {
+            if (isTravelMode) {
+                document.getElementById('temp-display').textContent = '旅行';
+                document.getElementById('temp-display').classList.add('travel-mode');
+            } else {
+                const temp = currentTempWhole + (currentTempDecimal / 10);
+                document.getElementById('temp-display').textContent = temp.toFixed(1);
+                document.getElementById('temp-display').classList.remove('travel-mode');
+            }
+            
+            // Update wheel selections with green highlighting
+            document.querySelectorAll('#whole-options .wheel-option').forEach(option => {
+                option.classList.remove('selected');
+                if (parseInt(option.getAttribute('data-value')) === currentTempWhole) {
+                    option.classList.add('selected');
+                }
+            });
+            
+            document.querySelectorAll('#decimal-options .wheel-option').forEach(option => {
+                option.classList.remove('selected');
+                if (parseInt(option.getAttribute('data-value')) === currentTempDecimal) {
+                    option.classList.add('selected');
+                }
+            });
+        }
+        
+        function setWhole(value) {
+            if (!isTravelMode) {
+                currentTempWhole = parseInt(value);
+                updateTempDisplay();
+            }
+        }
+        
+        function setDecimal(value) {
+            if (!isTravelMode) {
+                currentTempDecimal = parseInt(value);
+                updateTempDisplay();
+            }
+        }
+        
+        function toggleTravelMode() {
+            isTravelMode = !isTravelMode;
+            const travelBtn = document.getElementById('travel-btn');
+            
+            if (isTravelMode) {
+                travelBtn.textContent = '体温モード';
+                travelBtn.classList.add('active');
+            } else {
+                travelBtn.textContent = '旅行';
+                travelBtn.classList.remove('active');
+            }
+            
+            updateTempDisplay();
+        }
+        
+        function setupTemperatureWheels() {
+            // Remove any existing event listeners
+            document.querySelectorAll('#whole-options .wheel-option').forEach(option => {
+                const newOption = option.cloneNode(true);
+                option.parentNode.replaceChild(newOption, option);
+            });
+            
+            document.querySelectorAll('#decimal-options .wheel-option').forEach(option => {
+                const newOption = option.cloneNode(true);
+                option.parentNode.replaceChild(newOption, option);
+            });
+            
+            // Add fresh event listeners
+            document.querySelectorAll('#whole-options .wheel-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const value = parseInt(this.getAttribute('data-value'));
+                    setWhole(value);
+                });
+            });
+            
+            document.querySelectorAll('#decimal-options .wheel-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const value = parseInt(this.getAttribute('data-value'));
+                    setDecimal(value);
+                });
+            });
+            
+            // Update display with current values
+            updateTempDisplay();
+        }
+        
+        // Initialize data structure
+        function initializeData() {
+            // Update the calendar title
+            document.getElementById('calendar-title').textContent = `出席表 - ${monthNames[displayMonth-1]}${displayYear}`;
+            
+            // Get school ID if not set
+            if (!schoolId) {
+                schoolId = localStorage.getItem('schoolId');
+                if (!schoolId || schoolId === '' || schoolId === 'null' || schoolId === 'undefined') {
+                    schoolId = 'FunaInt'; // Fixed school ID - no prompt
+                    localStorage.setItem('schoolId', schoolId);
+                }
+            }
+            
+            console.log('School ID set to:', schoolId); // Debug log
+            
+            const dim = daysIn(displayYear, displayMonth);
+            for (let day = 1; day <= dim; day++) {
+                const date = new Date(displayYear, displayMonth - 1, day);
+                const dayKey = `${day} ${weekdays[date.getDay()]}`;
+                
+                attendanceData[dayKey] = {};
+                temperatureData[dayKey] = {};
+                memoData[dayKey] = {};
+                
+                students.forEach(student => {
+                    attendanceData[dayKey][student] = '';
+                    temperatureData[dayKey][student] = 36.0;
+                    memoData[dayKey][student] = '';
+                });
+            }
+            
+        }
+        
+        // Generate attendance grid
+        function generateGrid() {
+            const grid = document.getElementById('attendance-grid');
+            grid.innerHTML = '';
+
+            const dim = daysIn(displayYear, displayMonth);
+            for (let day = 1; day <= dim; day++) {
+                const date = new Date(displayYear, displayMonth - 1, day);
+                const dayKey = `${day} ${weekdays[date.getDay()]}`;
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6; // Sunday (0) or Saturday (6)
+                
+                const row = document.createElement('div');
+                row.className = 'table-row';
+                if (isWeekend) {
+                    row.classList.add('weekend');
+                }
+                
+                // Date cell
+                const dateCell = document.createElement('div');
+                dateCell.className = 'date-cell';
+                if (isWeekend) {
+                    dateCell.classList.add('weekend');
+                }
+                dateCell.textContent = dayKey;
+                row.appendChild(dateCell);
+                
+                // Student cells
+                students.forEach(student => {
+                    const cell = document.createElement('div');
+                    cell.className = 'attendance-cell';
+                    cell.dataset.date = dayKey;
+                    cell.dataset.student = student;
+                    
+                    if (!isWeekend) {
+                        const status = attendanceData[dayKey][student];
+                        if (status === 'present') {
+                            cell.classList.add('present');
+                            cell.textContent = '○';
+                        } else if (status === 'unexcused') {
+                            cell.classList.add('unexcused');
+                            cell.textContent = '欠';
+                        } else if (status === 'excused') {
+                            cell.classList.add('excused');
+                            cell.textContent = '/';
+                        }
+                        
+                        cell.addEventListener('click', () => openPopup(dayKey, student));
+                    } else {
+                        // Weekend cells are not clickable
+                        cell.textContent = '';
+                    }
+                    
+                    row.appendChild(cell);
+                });
+                
+                grid.appendChild(row);
+            }
+        }
+        
+        // Open popup
+        function openPopup(date, student) {
+            currentCell = { date, student };
+            const storedTemp = temperatureData[date][student];
+            
+            // Check if stored temperature indicates travel mode
+            if (storedTemp === -1) {
+                isTravelMode = true;
+                currentTempWhole = 36;
+                currentTempDecimal = 0;
+            } else {
+                isTravelMode = false;
+                currentTempWhole = Math.floor(storedTemp);
+                currentTempDecimal = Math.round((storedTemp - currentTempWhole) * 10);
+            }
+            
+            document.getElementById('selected-student').textContent = student;
+            document.getElementById('selected-date').textContent = date;
+            document.getElementById('memo-input').value = memoData[date][student];
+            
+            // Update travel button state
+            const travelBtn = document.getElementById('travel-btn');
+            if (isTravelMode) {
+                travelBtn.textContent = '体温モード';
+                travelBtn.classList.add('active');
+            } else {
+                travelBtn.textContent = '旅行';
+                travelBtn.classList.remove('active');
+            }
+            
+            document.getElementById('popup-overlay').style.display = 'flex';
+            
+            // Setup temperature wheels AFTER popup is shown
+            setTimeout(() => {
+                setupTemperatureWheels();
+            }, 50);
+        }
+        
+        // Close popup
+        function closePopup() {
+            document.getElementById('popup-overlay').style.display = 'none';
+            currentCell = null;
+        }
+        
+        // Set attendance status
+        function setAttendance(status) {
+            if (!currentCell) return;
+            
+            const { date, student } = currentCell;
+            let currentTemp;
+            
+            if (isTravelMode) {
+                currentTemp = -1; // Special value for travel mode
+            } else {
+                currentTemp = currentTempWhole + (currentTempDecimal / 10);
+            }
+            
+            attendanceData[date][student] = status;
+            temperatureData[date][student] = currentTemp;
+            memoData[date][student] = document.getElementById('memo-input').value;
+            
+            generateGrid();
+            updateStats();
+            closePopup();
+            
+            // Auto-save after changes
+            saveToFirebase();
+        }
+        
+        // Clear cell
+        function clearCell() {
+            if (!currentCell) return;
+            
+            const { date, student } = currentCell;
+            attendanceData[date][student] = '';
+            temperatureData[date][student] = 36.0;
+            memoData[date][student] = '';
+            
+            // Reset temperature variables
+            currentTempWhole = 36;
+            currentTempDecimal = 0;
+            isTravelMode = false;
+            updateTempDisplay();
+            
+            generateGrid();
+            updateStats();
+            closePopup();
+            
+            // Auto-save after changes
+            saveToFirebase();
+        }
+        
+        // Update statistics
+        function updateStats() {
+            let presentCount = 0;
+            let excusedCount = 0;
+            let unexcusedCount = 0;
+            let totalRecorded = 0;
+            
+            Object.values(attendanceData).forEach(dayData => {
+                Object.values(dayData).forEach(status => {
+                    if (status === 'present') presentCount++;
+                    else if (status === 'excused') excusedCount++;
+                    else if (status === 'unexcused') unexcusedCount++;
+                    if (status !== '') totalRecorded++;
+                });
+            });
+            
+            document.getElementById('present-count').textContent = presentCount;
+            document.getElementById('excused-count').textContent = excusedCount;
+            document.getElementById('unexcused-count').textContent = unexcusedCount;
+            document.getElementById('total-recorded').textContent = totalRecorded;
+        }
+        
+        // Close popup when clicking outside
+        document.getElementById('popup-overlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('popup-overlay')) {
+                closePopup();
+            }
+        });
+        
+        // Login functions
+        function openLogin() {
+            document.getElementById('login-popup').style.display = 'flex';
+            document.getElementById('username-input').focus();
+        }
+        
+        function closeLogin() {
+            document.getElementById('login-popup').style.display = 'none';
+            document.getElementById('username-input').value = '';
+            document.getElementById('password-input').value = '';
+            document.getElementById('login-error').style.display = 'none';
+        }
+        
+        function attemptLogin() {
+            const username = document.getElementById('username-input').value;
+            const password = document.getElementById('password-input').value;
+            
+            if (validCredentials[username] && validCredentials[username] === password) {
+                isLoggedIn = true;
+                closeLogin();
+                openAdmin();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+                document.getElementById('password-input').value = '';
+            }
+        }
+        
+        function openAdmin() {
+            document.getElementById('admin-popup').style.display = 'flex';
+        }
+        
+        function closeAdmin() {
+            document.getElementById('admin-popup').style.display = 'none';
+        }
+        
+        function adminAction(action) {
+            if (action === 'change-password') {
+                closeAdmin();
+                openAccounts();
+            } else {
+                // Placeholder for other admin actions
+                alert(`Admin action: ${action} - Functionality will be added later`);
+            }
+        }
+        
+        // Account Management Functions
+        let currentEditUser = null;
+        let editMode = null; // 'add', 'username', 'password'
+        
+        function openAccounts() {
+            loadCredentials();
+            renderAccountList();
+            document.getElementById('account-popup').style.display = 'flex';
+        }
+        
+        function closeAccounts() {
+            document.getElementById('account-popup').style.display = 'none';
+        }
+        
+        function renderAccountList() {
+            const accountList = document.getElementById('account-list');
+            accountList.innerHTML = '';
+            
+            Object.keys(validCredentials).forEach(username => {
+                const accountItem = document.createElement('div');
+                accountItem.className = 'account-item';
+                accountItem.innerHTML = `
+                    <div class="account-username">${username}</div>
+                    <div class="account-actions">
+                        <button class="account-btn btn-change-username" onclick="editUsername('${username}')">Change Username</button>
+                        <button class="account-btn btn-change-password" onclick="editPassword('${username}')">Change Password</button>
+                        <button class="account-btn btn-delete" onclick="deleteAccount('${username}')">Delete Account</button>
+                    </div>
+                `;
+                accountList.appendChild(accountItem);
+            });
+        }
+        
+        function showAddAccount() {
+            editMode = 'add';
+            currentEditUser = null;
+            
+            document.getElementById('form-title').textContent = 'Add Account';
+            document.getElementById('username-label').textContent = 'NEW USERNAME';
+            document.getElementById('password-label').textContent = 'PASSWORD';
+            
+            document.getElementById('form-username').value = '';
+            document.getElementById('form-password').value = '';
+            
+            document.getElementById('password-group').style.display = 'block';
+            document.getElementById('new-password-group').style.display = 'none';
+            document.getElementById('confirm-password-group').style.display = 'none';
+            document.getElementById('form-error').style.display = 'none';
+            
+            document.getElementById('account-form-popup').style.display = 'flex';
+        }
+        
+        function editUsername(username) {
+            editMode = 'username';
+            currentEditUser = username;
+            
+            document.getElementById('form-title').textContent = 'Change Username';
+            document.getElementById('username-label').textContent = 'NEW USERNAME';
+            document.getElementById('password-label').textContent = 'PASSWORD';
+            
+            document.getElementById('form-username').value = '';
+            document.getElementById('form-password').value = '';
+            
+            document.getElementById('password-group').style.display = 'block';
+            document.getElementById('new-password-group').style.display = 'none';
+            document.getElementById('confirm-password-group').style.display = 'none';
+            document.getElementById('form-error').style.display = 'none';
+            
+            document.getElementById('account-form-popup').style.display = 'flex';
+        }
+        
+        function editPassword(username) {
+            editMode = 'password';
+            currentEditUser = username;
+            
+            document.getElementById('form-title').textContent = 'Change Password';
+            document.getElementById('password-label').textContent = 'OLD PASSWORD';
+            
+            document.getElementById('form-username').value = '';
+            document.getElementById('form-password').value = '';
+            document.getElementById('form-new-password').value = '';
+            document.getElementById('form-confirm-password').value = '';
+            
+            document.getElementById('password-group').style.display = 'block';
+            document.getElementById('new-password-group').style.display = 'block';
+            document.getElementById('confirm-password-group').style.display = 'block';
+            document.getElementById('form-error').style.display = 'none';
+            
+            // Hide username field for password change
+            document.querySelector('.form-group').style.display = 'none';
+            
+            document.getElementById('account-form-popup').style.display = 'flex';
+        }
+        
+        function closeAccountForm() {
+            document.getElementById('account-form-popup').style.display = 'none';
+            // Show username field again
+            document.querySelector('.form-group').style.display = 'block';
+        }
+        
+        function saveAccount() {
+            const username = document.getElementById('form-username').value.trim();
+            const password = document.getElementById('form-password').value;
+            const newPassword = document.getElementById('form-new-password').value;
+            const confirmPassword = document.getElementById('form-confirm-password').value;
+            const errorDiv = document.getElementById('form-error');
+            
+            // Clear previous errors
+            errorDiv.style.display = 'none';
+            
+            if (editMode === 'add') {
+                // Validate new account
+                if (!username) {
+                    showError('Username is required');
+                    return;
+                }
+                if (username.length > 20) {
+                    showError('Username must be 20 characters or less');
+                    return;
+                }
+                if (validCredentials[username]) {
+                    showError('Username already exists');
+                    return;
+                }
+                if (!password) {
+                    showError('Password is required');
+                    return;
+                }
+                if (password.length < 8) {
+                    showError('Password must be at least 8 characters');
+                    return;
+                }
+                if (password.length > 20) {
+                    showError('Password must be 20 characters or less');
+                    return;
+                }
+                
+                // Add new account
+                validCredentials[username] = password;
+                saveCredentials();
+                closeAccountForm();
+                renderAccountList();
+                showStatus('Account added successfully', 'success');
+                
+            } else if (editMode === 'username') {
+                // Validate username change
+                if (!username) {
+                    showError('New username is required');
+                    return;
+                }
+                if (username.length > 20) {
+                    showError('Username must be 20 characters or less');
+                    return;
+                }
+                if (username !== currentEditUser && validCredentials[username]) {
+                    showError('Username already exists');
+                    return;
+                }
+                if (validCredentials[currentEditUser] !== password) {
+                    showError('Incorrect password');
+                    return;
+                }
+                
+                // Change username
+                const oldPassword = validCredentials[currentEditUser];
+                delete validCredentials[currentEditUser];
+                validCredentials[username] = oldPassword;
+                saveCredentials();
+                closeAccountForm();
+                renderAccountList();
+                showStatus('Username changed successfully', 'success');
+                
+            } else if (editMode === 'password') {
+                // Validate password change
+                if (validCredentials[currentEditUser] !== password) {
+                    showError('Incorrect old password');
+                    return;
+                }
+                if (!newPassword) {
+                    showError('New password is required');
+                    return;
+                }
+                if (newPassword.length < 8) {
+                    showError('New password must be at least 8 characters');
+                    return;
+                }
+                if (newPassword.length > 20) {
+                    showError('New password must be 20 characters or less');
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    showError('Passwords do not match');
+                    return;
+                }
+                
+                // Change password
+                validCredentials[currentEditUser] = newPassword;
+                saveCredentials();
+                closeAccountForm();
+                renderAccountList();
+                showStatus('Password changed successfully', 'success');
+            }
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('form-error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function deleteAccount(username) {
+            if (Object.keys(validCredentials).length === 1) {
+                showError('Cannot delete the last admin account');
+                return;
+            }
+            
+            currentEditUser = username;
+            document.getElementById('delete-username').textContent = username;
+            document.getElementById('delete-username-label').textContent = username;
+            document.getElementById('delete-password').value = '';
+            document.getElementById('delete-error').style.display = 'none';
+            document.getElementById('delete-popup').style.display = 'flex';
+        }
+        
+        function confirmDelete() {
+            const password = document.getElementById('delete-password').value;
+            const deleteError = document.getElementById('delete-error');
+            
+            if (!password) {
+                deleteError.textContent = 'Password is required to delete account';
+                deleteError.style.display = 'block';
+                return;
+            }
+            
+            if (validCredentials[currentEditUser] !== password) {
+                deleteError.textContent = 'Incorrect password';
+                deleteError.style.display = 'block';
+                return;
+            }
+            
+            delete validCredentials[currentEditUser];
+            saveCredentials();
+            closeDelete();
+            renderAccountList();
+            showStatus('Account deleted successfully', 'success');
+        }
+        
+        function closeDelete() {
+            document.getElementById('delete-popup').style.display = 'none';
+            document.getElementById('delete-password').value = '';
+            document.getElementById('delete-error').style.display = 'none';
+        }
+
+        function changeMonth(delta) {
+            displayMonth += delta;
+            if (displayMonth < 1) {
+                displayMonth = 12;
+                displayYear--;
+            } else if (displayMonth > 12) {
+            displayMonth = 1;
+            displayYear++;
+            }
+            // re-build everything for the new month
+            initializeData();
+            loadFromFirebase();  // this will regenerate the grid & stats
+            }
+            document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
+            document.getElementById('next-month').addEventListener('click', () => changeMonth( 1));
+
+            initializeData();
+            loadFromFirebase();
+        
+        // Allow Enter key to submit login
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.getElementById('login-popup').style.display === 'flex') {
+                attemptLogin();
+            }
+        });
+        
+        // Close login/admin popups when clicking outside
+        document.getElementById('login-popup').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('login-popup')) {
+                closeLogin();
+            }
+        });
+        
+        document.getElementById('admin-popup').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('admin-popup')) {
+                closeAdmin();
+            }
+        });
+        
+        // Initialize the application
+        loadCredentials(); // Load saved admin accounts
+        initializeData();
+        loadFromFirebase(); // This will also call generateGrid() and updateStats()
+    </script>
+</body>
+</html>
